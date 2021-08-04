@@ -10,16 +10,17 @@
         <div class="row"></div>
         <div class="row">
           <div class="col-sm-12">
-            <div class="row"></div>
-            <div v-if="isLoading" class="loading-mask">
-              <div class="loading-content">
-                <span style="color: white">Loading...</span>
-              </div>
-            </div>
             <table
               class="table table-hover table-bordered table-responsive-sm"
               id="dataTables-example"
+              width="100%"
             >
+              <div class="row"></div>
+              <div v-if="isLoading" class="loading-mask">
+                <div class="loading-content">
+                  <span style="color: white">Loading...</span>
+                </div>
+              </div>
               <thead class="thead-dark">
                 <tr>
                   <th v-if="hasCheckbox" class="checkbox-th">
@@ -36,8 +37,8 @@
                       :class="{
                         sortable: col.sortable,
                         both: col.sortable,
-                        asc: setting.order === col.field && setting.sort === 'asc',
-                        desc: setting.order === col.field && setting.sort === 'desc',
+                        asc: sortable.order == col.field && sortable.sort == 'asc',
+                        desc: sortable.order == col.field && sortable.sort == 'desc',
                       }"
                       @click="col.sortable ? doSort(col.field) : false"
                     >
@@ -47,50 +48,26 @@
                 </tr>
               </thead>
               <tbody v-if="rows.length > 0">
-                <template v-if="isStaticMode">
-                  <tr v-for="(row, i) in localRows" :key="i">
-                    <td v-if="hasCheckbox">
-                      <div>
-                        <input
-                          type="checkbox"
-                          :ref="
-                            (el) => {
-                              rowCheckbox[i] = el;
-                            }
-                          "
-                          :value="row[setting.keyColumn]"
-                          @click="checked"
-                        />
-                      </div>
-                    </td>
-                    <td v-for="(col, j) in columns" :key="j">
-                      <div v-if="col.display" v-html="col.display(row)"></div>
-                      <span v-else>{{ row[col.field] }}</span>
-                    </td>
-                  </tr>
-                </template>
-                <template v-else>
-                  <tr v-for="(row, i) in rows" :key="i">
-                    <td v-if="hasCheckbox">
-                      <div>
-                        <input
-                          type="checkbox"
-                          :ref="
-                            (el) => {
-                              rowCheckbox[i] = el;
-                            }
-                          "
-                          :value="row[setting.keyColumn]"
-                          @click="checked"
-                        />
-                      </div>
-                    </td>
-                    <td v-for="(col, j) in columns" :key="j">
-                      <div v-if="col.display" v-html="col.display(row)"></div>
-                      <span v-else>{{ row[col.field] }}</span>
-                    </td>
-                  </tr>
-                </template>
+                <tr v-for="(row, i) in rows" :key="i">
+                  <td v-if="hasCheckbox">
+                    <div>
+                      <input
+                        type="checkbox"
+                        :ref="
+                          (el) => {
+                            rowCheckbox[i] = el;
+                          }
+                        "
+                        :value="row[setting.keyColumn]"
+                        @click="checked"
+                      />
+                    </div>
+                  </td>
+                  <td v-for="(col, j) in columns" :key="j">
+                    <div v-if="col.display" v-html="col.display(row)"></div>
+                    <span v-else>{{ row[col.field] }}</span>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -106,7 +83,6 @@
           <div class="col-sm-12 col-md-4">
             <span>{{ messages.pageSizeChangeLabel }}</span>
             <select v-model="setting.pageSize">
-              <option value="10">10</option>
               <option value="25">25</option>
               <option value="50">50</option>
             </select>
@@ -145,9 +121,9 @@
                 </li>
                 <li
                   class="page-item"
-                  v-for="n in setting.paging"
+                  v-for="n in setting.pagging"
                   :key="n"
-                  :class="{ disabled: setting.page === n }"
+                  :class="{ disabled: setting.page == n }"
                 >
                   <a class="page-link" href="javascript:void(0)" @click="movePage(n)">{{
                     n
@@ -206,7 +182,7 @@ import {
   nextTick,
 } from "vue";
 
-interface tableSetting {
+interface tabelSetting {
   isCheckAll: boolean;
   keyColumn: string;
   page: number;
@@ -214,9 +190,7 @@ interface tableSetting {
   maxPage: number;
   offset: number;
   limit: number;
-  paging: Array<number>;
-  order: string;
-  sort: string;
+  pagging: Array<number>;
 }
 
 interface column {
@@ -226,58 +200,62 @@ interface column {
 
 export default defineComponent({
   name: "my-table",
-  emits: ["return-checked-rows", "do-search", "is-finished"],
+  emits: [
+    'return-checked-rows',
+    'do-search',
+    'is-finished'
+  ],
   props: {
-    // 是否讀取中 (is data loading)
+    // 是否讀取中
     isLoading: {
       type: Boolean,
       require: true,
     },
-    // 是否執行了重新查詢 (Whether to perform a re-query)
+    // 是否執行了重新查詢
     isReSearch: {
       type: Boolean,
       require: true,
     },
-    // 有無Checkbox (Presence of Checkbox)
+    // 有無Checkbox
     hasCheckbox: {
       type: Boolean,
       default: false,
     },
-    // 標題 (title)
+    // 標題
     title: {
       type: String,
       default: "",
     },
-    // 欄位 (Field)
+    // 欄位
     columns: {
       type: Array,
       default: () => {
         return [];
       },
     },
-    // 資料 (data)
+    // 資料
     rows: {
       type: Array,
       default: () => {
         return [];
       },
     },
-    // 一頁顯示筆數 (Display the number of items on one page)
+    // 一頁顯示筆數
     pageSize: {
       type: Number,
       default: 10,
     },
-    // 總筆數 (Total number of transactions)
+    // 總筆數
     total: {
       type: Number,
       default: 100,
     },
-    // 現在頁數 (Current page number)
+    // 現在頁數
     page: {
       type: Number,
       default: 1,
     },
-    // 排序條件 (Sort condition)
+    // 排序條件
     sortable: {
       type: Object,
       default: () => {
@@ -287,7 +265,7 @@ export default defineComponent({
         };
       },
     },
-    // 顯示文字 (Display text)
+    // 顯示文字
     messages: {
       type: Object,
       default: () => {
@@ -299,18 +277,14 @@ export default defineComponent({
         };
       },
     },
-    // 靜態模式 (Static mode(no refresh server data))
-    isStaticMode: {
-      type: Boolean,
-      default: false,
-    },
   },
   setup(props, { emit }) {
-    // 組件用內部設定值 (Internal set value for components)
-    const setting: tableSetting = reactive({
-      // 是否全選 (Whether to select all)
+    // 組件用內部設定值
+    console.log(props)
+    const setting: tabelSetting = reactive({
+      // 是否全選
       isCheckAll: false,
-      // KEY欄位名稱 (KEY field name)
+      // KEY欄位名稱
       keyColumn: computed(() => {
         let key = "";
         Object.assign(props.columns).forEach((col: column) => {
@@ -320,11 +294,11 @@ export default defineComponent({
         });
         return key;
       }),
-      // 當前頁數 (current page number)
+      // 當前頁數
       page: props.page,
-      // 每頁顯示筆數 (Display count per page)
-      pageSize: props.pageSize,
-      // 最大頁數 (Maximum number of pages)
+      // 每頁顯示筆數
+      pageSize: 25,
+      // 最大頁數
       maxPage: computed(() => {
         if (props.total <= 0) {
           return 0;
@@ -336,17 +310,17 @@ export default defineComponent({
         }
         return maxPage;
       }),
-      // 該頁數起始值 (The starting value of the page number)
+      // 該頁數起始值
       offset: computed(() => {
         return (setting.page - 1) * setting.pageSize + 1;
       }),
-      // 該頁數最大值 (Maximum number of pages0
+      // 該頁數最大值
       limit: computed(() => {
         let limit = setting.page * setting.pageSize;
         return props.total >= limit ? limit : props.total;
       }),
-      // 換頁陣列 (Paging array)
-      paging: computed(() => {
+      // 換頁陣列
+      pagging: computed(() => {
         let startPage = setting.page - 2 <= 0 ? 1 : setting.page - 2;
         if (setting.maxPage - setting.page <= 2) {
           startPage = setting.maxPage - 4;
@@ -360,60 +334,25 @@ export default defineComponent({
         }
         return pages;
       }),
-      // 組件內用排序 (Sortable for local)
-      order: props.sortable.order,
-      sort: props.sortable.sort,
     });
-
-    // 組件內用資料 (Data rows for local)
-    const localRows = computed(() => {
-      // sort rows
-      let property = setting.order;
-      let sort_order = 1;
-      if (setting.sort === "desc") {
-        sort_order = -1;
-      }
-      let rows = props.rows as Array<unknown>;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      rows.sort((a: any, b: any): number => {
-        if (a[property] < b[property]) {
-          return -1 * sort_order;
-        } else if (a[property] > b[property]) {
-          return sort_order;
-        } else {
-          return 0;
-        }
-      });
-
-      // return sorted and offset rows
-      let result = [];
-      for (let index = setting.offset - 1; index < setting.limit; index++) {
-        if (rows[index]) {
-          result.push(rows[index]);
-        }
-      }
-      return result;
-    });
-
     ////////////////////////////
     //
     //  Checkbox 相關操作
-    //  (Checkbox related operations)
     //
 
-    // 定義Checkbox參照 (Define Checkbox reference)
+    // 定義Checkbox參照
     const rowCheckbox = ref([]);
     if (props.hasCheckbox) {
       /**
-       * 重新渲染前執行 (Execute before re-rendering)
+       * 重新渲染前執行
        */
       onBeforeUpdate(() => {
-        // 每次更新前都把值全部清空 (Clear all values before each update)
+        // 每次更新前都把值全部清空
         rowCheckbox.value = [];
       });
 
       /**
-       * 監聽全勾選Checkbox (Check all checkboxes for monitoring)
+       * 監聽全勾選Checkbox
        */
       watch(
         () => setting.isCheckAll,
@@ -422,70 +361,67 @@ export default defineComponent({
           rowCheckbox.value.forEach((val: HTMLInputElement) => {
             if (val) {
               val.checked = state;
-              if (val.checked) {
+              if (val.checked == true) {
                 isChecked.push(val.value);
               }
             }
           });
-          // 回傳畫面上選上的資料 (Return the selected data on the screen)
+          // 回傳畫面上選上的資料
           emit("return-checked-rows", isChecked);
         }
       );
     }
 
     /**
-     * Checkbox點擊事件 (Checkbox click event)
+     * Checkbox點擊事件
      */
     const checked = () => {
       let isChecked: Array<string> = [];
       rowCheckbox.value.forEach((val: HTMLInputElement) => {
-        if (val && val.checked) {
+        if (val && val.checked == true) {
           isChecked.push(val.value);
         }
       });
-      // 回傳畫面上選上的資料 (Return the selected data on the screen)
+      // 回傳畫面上選上的資料
       emit("return-checked-rows", isChecked);
     };
 
     /**
-     * 清空畫面上所有選擇資料 (Clear all selected data on the screen)
+     * 清空畫面上所有選擇資料
      */
     const clearChecked = () => {
       rowCheckbox.value.forEach((val: HTMLInputElement) => {
-        if (val && val.checked) {
+        if (val && val.checked == true) {
           val.checked = false;
         }
       });
-      // 回傳畫面上選上的資料 (Return the selected data on the screen)
+      // 回傳畫面上選上的資料
       emit("return-checked-rows", []);
     };
 
     ////////////////////////////
     //
     //  排序·換頁等 相關操作
-    //  (Sorting, page change, etc. related operations)
     //
 
     /**
-     * 呼叫執行排序 (Call execution sequencing)
+     * 呼叫執行排序
      */
     const doSort = (order: string) => {
       let sort = "asc";
-      if (order == setting.order) {
-        // 排序中的項目時 (When sorting items)
-        if (setting.sort == "asc") {
+      if (order == props.sortable.order) {
+        // 排序中的項目時
+        if (props.sortable.sort == "asc") {
           sort = "desc";
         }
       }
       let offset = (setting.page - 1) * setting.pageSize;
       let limit = setting.pageSize;
-      setting.order = order;
-      setting.sort = sort;
       emit("do-search", offset, limit, order, sort);
 
-      // 清空畫面上選擇的資料 (Clear the selected data on the screen)
+      // 清空畫面上選擇的資料
       if (setting.isCheckAll) {
-        // 取消全選時自然會清空 (It will be cleared when you cancel all selections)
+        // 取消全選時自然會清空
         setting.isCheckAll = false;
       } else {
         if (props.hasCheckbox) {
@@ -495,27 +431,27 @@ export default defineComponent({
     };
 
     /**
-     * 切換頁碼 (Switch page number)
+     * 切換頁碼
      *
-     * @param page      number  新頁碼    (New page number)
-     * @param prevPage  number  現在頁碼  (Current page number)
+     * @param number page     新頁碼
+     * @param number prevPage 現在頁碼
      */
     const changePage = (page: number, prevPage: number) => {
       setting.isCheckAll = false;
-      let order = setting.order;
-      let sort = setting.sort;
+      let order = props.sortable.order;
+      let sort = props.sortable.sort;
       let offset = (page - 1) * setting.pageSize;
       let limit = setting.pageSize;
       if (!props.isReSearch || page > 1 || page == prevPage) {
-        // 非重新查詢發生的頁碼變動才執行呼叫查詢 (Call query will only be executed if the page number is changed without re-query)
+        // 非重新查詢發生的頁碼變動才執行呼叫查詢
         emit("do-search", offset, limit, order, sort);
       }
     };
-    // 監聽頁碼切換 (Monitor page switching)
+    // 監聽頁碼切換
     watch(() => setting.page, changePage);
 
     /**
-     * 切換顯示筆數 (Switch display number)
+     * 切換顯示筆數
      */
     const changePageSize = () => {
       if (setting.page === 1) {
@@ -527,39 +463,39 @@ export default defineComponent({
         setting.isCheckAll = false;
       }
     };
-    // 監聽顯示筆數切換 (Monitor display number switch)
+    // 監聽顯示筆數切換
     watch(() => setting.pageSize, changePageSize);
 
     /**
-     * 上一頁 (Previous page)
+     * 上一頁
      */
     const prevPage = () => {
       if (setting.page == 1) {
-        // 如果是第一頁，不予執行 (If it is the first page, it will not be executed)
+        // 如果是第一頁，不予執行
         return false;
       }
       setting.page--;
     };
 
     /**
-     * 移動至指定頁數 (Move to the specified number of pages)
+     * 移動至指定頁數
      */
     const movePage = (page: number) => {
       setting.page = page;
     };
 
     /**
-     * 下一頁 (Next page)
+     * 下一頁
      */
     const nextPage = () => {
       if (setting.page >= setting.maxPage) {
-        // 如果等於大於最大頁數，不與執行 (If it is equal to or greater than the maximum number of pages, no execution)
+        // 如果等於大於最大頁數，不與執行
         return false;
       }
       setting.page++;
     };
 
-    // 監聽資料變更 (Monitoring data changes)
+    // 監聽資料變更
     watch(
       () => props.rows,
       () => {
@@ -567,7 +503,7 @@ export default defineComponent({
           setting.page = 1;
         }
         nextTick(function () {
-          // 資料完成渲染後回傳私有元件 (Return the private components after the data is rendered)
+          // 資料完成渲染後回傳私有元件
           let localElement = document.getElementsByClassName("is-rows-el");
           emit("is-finished", localElement);
         });
@@ -582,9 +518,8 @@ export default defineComponent({
     };
 
     if (props.hasCheckbox) {
-      // 需要 Checkbox 時 (When Checkbox is needed)
+      // 需要 Checkbox 時
       return {
-        localRows,
         setting,
         rowCheckbox,
         checked,
@@ -596,7 +531,6 @@ export default defineComponent({
       };
     } else {
       return {
-        localRows,
         setting,
         doSort,
         prevPage,
@@ -606,6 +540,9 @@ export default defineComponent({
       };
     }
   },
+  mounted() {
+    this.setting.pageSize = 25
+  }
 });
 </script>
 
@@ -653,11 +590,11 @@ export default defineComponent({
   justify-content: center;
 }
 
-/*.loading-icon {*/
-/*  display: flex;*/
-/*  margin-left: auto;*/
-/*  margin-right: auto;*/
-/*}*/
+.loading-icon {
+  display: flex;
+  margin-left: auto;
+  margin-right: auto;
+}
 
 .card {
   position: relative;
@@ -677,8 +614,8 @@ select {
   border: 1px solid #cccccc;
   background-color: #ffffff;
   height: auto;
-  padding: 0;
-  margin-bottom: 0;
+  padding: 0px;
+  margin-bottom: 0px;
 }
 
 table {
@@ -726,9 +663,9 @@ tr {
   border-top: 1px solid #dee2e6;
 }
 
-/*.table-border {*/
-/*  border: 1px solid #dee2e6;*/
-/*}*/
+.table-border {
+  border: 1px solid #dee2e6;
+}
 
 .table td,
 .table th {
